@@ -32,10 +32,10 @@ void SMU::SerialInputInterpretation()
         LSVVoltageStep = (restOfString.substring(commaIndex + 1, commaIndexAux).toFloat() * 0.001);
 
         commaIndex = restOfString.indexOf(',', commaIndexAux + 1);
-        LSVInitialVoltage = ((restOfString.substring(commaIndexAux + 1, commaIndex).toFloat())) + 2.5;
+        LSVInitialVoltage = restOfString.substring(commaIndexAux + 1, commaIndex).toFloat();
 
         commaIndexAux = restOfString.indexOf(',', commaIndex + 1);
-        LSVFinalVoltage = ((restOfString.substring(commaIndex + 1, commaIndexAux).toFloat())) + 2.5;
+        LSVFinalVoltage = restOfString.substring(commaIndex + 1, commaIndexAux).toFloat();
 
         // Serial.println(LSVStepTime);
         // Serial.println(LSVVoltageStep,5);
@@ -125,30 +125,33 @@ void SMU::LinearSweepVoltammetry()
     DataPackage = "";
     int timer = 0;
     count = 0;
-    int LSVVoltageStepbit = ceil((LSVVoltageStep * 4095) / 5);
-    int LSVInitialVoltagebit = (LSVInitialVoltage * 4095) / 5;
-    int LSVFinalVoltagebit = (LSVFinalVoltage * 4095) / 5;
 
-    for (float i = LSVInitialVoltagebit; i <= LSVFinalVoltagebit; i = i + LSVVoltageStepbit)
+    LSVInitialVoltage = -0.4;
+    LSVFinalVoltage = 0.5;
+    LSVVoltageStep = 0.005;
+    LSVStepTime = 0;
+
+    for (float i = LSVInitialVoltage; i <= LSVFinalVoltage; i = i + LSVVoltageStep)
     {
-        DAC.setVoltage(i, false);
+        ApplyVoltage(i);
         timer = millis();
         while ((millis() - timer) < LSVStepTime)
         {
         }
         ReadCurrent();
-        ReadVoltage();
+        // ReadVoltage();
 
         if (count == 10)
         {
-            SendData();
+            // SendData();
             count = 0;
         }
         count++;
     }
     if (count = !0)
-        SendData();
-    DAC.setVoltage(2047, false);
+        // SendData();
+        DAC.setVoltage(0, false);
+    Serial.println("OK");
 }
 
 void SMU::CyclicSweepVoltammetry()
@@ -157,14 +160,15 @@ void SMU::CyclicSweepVoltammetry()
     DataPackage = "";
     int timer = 0;
     count = 0;
-    int CVVoltageStepbit = (CVVoltageStep * 4095) / 5;
-    int CVInitialVoltagebit = (CVInitialVoltage * 4095) / 5;
-    int CVFinalVoltagebit = (CVFinalVoltage * 4095) / 5;
-    int CVPeakVoltagebit = (CVPeakVoltage * 4095) / 5;
+    CVVoltageStep = 0.005;
+    CVInitialVoltage = 0;
+    CVFinalVoltage = 0;
+    CVPeakVoltage = 0.5;
+    CVPeakVoltage2 = -0.5;
 
     for (int cycle = 0; cycle < CVCycles; cycle++)
     {
-        for (float v = CVInitialVoltagebit; v <= CVPeakVoltagebit; v += CVVoltageStepbit)
+        for (float v = CVInitialVoltage; v <= CVPeakVoltage; v += CVVoltageStep)
         {
             DAC.setVoltage(v, false);
             ReadCurrent();
@@ -312,8 +316,9 @@ void SMU::VoltageControl(float desiredVoltage, float bitDesiredVoltage)
     float currentVoltage;
     float tolerance = 0.0006;
     float dacOutputVoltage = bitDesiredVoltage;
-    float Kp = 0.9;
-    float Ki = 15;
+    float Kp = 0.8;
+    float Ki = 0;
+    int count = 0;
 
     float currentTime, deltaTime, previousTime;
     float integral;
@@ -324,22 +329,25 @@ void SMU::VoltageControl(float desiredVoltage, float bitDesiredVoltage)
 
     while (loop)
     {
+        if (count > 5)
+            break;
+        count++;
         currentTime = millis();
         deltaTime = (currentTime - previousTime) / 1000.0;
         previousTime = currentTime;
-    
-        currentVoltage = (ads.readADC_Differential_0_1() * multiplier) - 0.5 + 0.05;
-        Serial.println(currentVoltage, 5);
+
+        currentVoltage = (ads.readADC_Differential_0_1() * multiplier) - 0.5;
+        // Serial.println(currentVoltage, 5);
 
         float error = desiredVoltage - (currentVoltage);
 
-        Serial.print("error: ");
-        Serial.println(error, 4);
+        // Serial.print("error: ");
+        // Serial.println(error, 4);
 
         currentVoltage = ((currentVoltage + 0.5F) * (3.33333F)) * 819;
         float errorBit = bitDesiredVoltage - currentVoltage;
-        Serial.print("errorBit: ");
-        Serial.println(errorBit);
+        // Serial.print("errorBit: ");
+        // Serial.println(errorBit);
 
         integral += errorBit * deltaTime;
 
@@ -350,29 +358,45 @@ void SMU::VoltageControl(float desiredVoltage, float bitDesiredVoltage)
 
         float correction = (Kp * errorBit) + (Ki * integral);
         dacOutputVoltage += correction;
-        Serial.print("correction: ");
-        Serial.println(Ki * integral);
-        
-        Serial.print("dacOutputVoltage: ");
-        Serial.println(dacOutputVoltage);
-        DAC.setVoltage(dacOutputVoltage, false);
+        // Serial.print("correction: ");
+        // Serial.println(Ki * integral);
 
-        delay(50);
+        // Serial.print("dacOutputVoltage: ");
+        // Serial.println(dacOutputVoltage);
+        DAC.setVoltage(dacOutputVoltage, false);
     }
     ads.setGain(GAIN_TWOTHIRDS);
     multiplier = 0.0001875;
-    Serial.println("OK");
+    currentVoltage = (ads.readADC_Differential_0_1() * multiplier) - 0.5 + 0.05;
+    // Serial.print(currentVoltage, 5);
+    // Serial.print(";");
+    // Serial.println("OK");
+    Serial.print(desiredVoltage, 5);
+    Serial.print(";");
+    Serial.println(currentVoltage, 5);
 }
 
 void SMU::ApplyVoltage(float voltage)
 {
-    float DACVoltageBit = ((voltage + 0.5F) * (3.33333F));
-    DACVoltageBit = DACVoltageBit * (4095/5);
-    Serial.print("DACVoltageBit: ");
-    Serial.println(DACVoltageBit);
+    ads.setGain(GAIN_TWOTHIRDS);
+    float DACVoltageBit;
+    DACVoltageBit = voltage * (10 / 3.3F) + 1.723 - 0.02;
+    // Serial.print("tensao: ");
+    // Serial.println(DACVoltageBit);
+    DACVoltageBit = DACVoltageBit * (4095 / 5);
+    DACVoltageBit = constrain(DACVoltageBit, 0, 4095);
+
+    // Serial.print("DACVoltageBit: ");
+    // Serial.println(DACVoltageBit);
 
     DAC.setVoltage(DACVoltageBit, false);
-    VoltageControl(voltage, DACVoltageBit);
+    float currentVoltage = (ads.readADC_Differential_0_1() * multiplier) - 0.5 + 0.05;
+    DataPackage = DataPackage + String(currentVoltage, 4) + ",";
+    Serial.print(voltage, 5);
+    Serial.print(";");
+    // Serial.println(currentVoltage, 5);
+
+    // VoltageControl(voltage, DACVoltageBit);
 }
 
 void SMU::SendData()
@@ -389,22 +413,31 @@ void SMU::SendData()
 // ads.setGain(GAIN_SIXTEEN);    // 16x gain  +/- 0.256V    0.0078125mV
 void SMU::ReadCurrent()
 {
-    resultCh2 = ads.readADC_SingleEnded(2);
-    ADSSetGain(resultCh2);
-    MeanOfMeasures(false);
-    lastVoltageCh2 = (resultCh2 * multiplier);
-    lastCurrent = lastVoltageCh2 / TransimpedanceResistor;
-    DataPackage = DataPackage + String((lastCurrent - 2.5), 9) + ",";
+    ads.setGain(GAIN_TWOTHIRDS);
+    multiplier = 0.0001875F;
+    // resultCh2 = ads.readADC_SingleEnded(2);
+    //  resultCh2 = ads.readADC_Differential_2_3();
+    // ADSSetGain(resultCh2 * multiplier);
+    //  MeanOfMeasures(false);
+    //  lastVoltageCh2 = (resultCh2 * multiplier);
+    //  lastCurrent = lastVoltageCh2 / TransimpedanceResistor;
+    // DataPackage = DataPackage + String((lastCurrent - 2.5), 9) + ",";
+    float tensao = ((ads.readADC_Differential_2_3() * multiplier) - 2.5) / 50000;
+    Serial.println(tensao, 9);
+    // DataPackage = DataPackage + String(tensao, 9) + ",";
     ads.setGain(GAIN_TWOTHIRDS);
 }
 
 void SMU::ReadVoltage()
 {
     resultDiff0_1 = ads.readADC_Differential_0_1();
-    ADSSetGain(resultDiff0_1);
-    MeanOfMeasures(true);
+    // ADSSetGain(resultDiff0_1);
+    // MeanOfMeasures(true);
     lastVoltageCh2 = (resultDiff0_1 * multiplier);
     DataPackage = DataPackage + String((lastVoltageCh2 - 0.5), 4) + ",";
+
+    // Serial.println(lastVoltageCh2 - 0.5, 5);
+
     ads.setGain(GAIN_TWOTHIRDS);
 }
 
@@ -436,36 +469,36 @@ void SMU::ADSSetGain(float voltage)
     {
         ads.setGain(GAIN_TWOTHIRDS);
         multiplier = 0.0001875;
-        Serial.println("GAIN_TWOTHIRDS");
+        // Serial.println("GAIN_TWOTHIRDS");
     }
     else if (abs(voltage) < 3.9 && abs(voltage) > 1.9)
     {
         ads.setGain(GAIN_ONE);
         multiplier = 0.000125;
-        Serial.println("GAIN_ONE");
+        // Serial.println("GAIN_ONE");
     }
     else if (abs(voltage) < 1.9 && abs(voltage) > 0.85)
     {
         ads.setGain(GAIN_TWO);
         multiplier = 0.0000625;
-        Serial.println("GAIN_TWO");
+        // Serial.println("GAIN_TWO");
     }
     else if (abs(voltage) < 0.85 && abs(voltage) > 0.38)
     {
         ads.setGain(GAIN_FOUR);
         multiplier = 0.00003125;
-        Serial.println("GAIN_FOUR");
+        // Serial.println("GAIN_FOUR");
     }
     else if (abs(voltage) < 0.38 && abs(voltage) > 0.19)
     {
         ads.setGain(GAIN_EIGHT);
         multiplier = 0.000015625;
-        Serial.println("GAIN_EIGHT");
+        // Serial.println("GAIN_EIGHT");
     }
     else if (abs(voltage) < 0.19)
     {
         ads.setGain(GAIN_SIXTEEN);
         multiplier = 0.0000078125;
-        Serial.println("GAIN_SIXTEEN");
+        // Serial.println("GAIN_SIXTEEN");
     }
 }

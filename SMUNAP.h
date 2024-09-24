@@ -37,6 +37,7 @@ public:
     float CVInitialVoltage;
     float CVFinalVoltage;
     float CVPeakVoltage;
+    float CVPeakVoltage2;
     int CVCycles;
     
     int DPVPulseTime;

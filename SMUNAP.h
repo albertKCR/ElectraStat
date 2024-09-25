@@ -46,6 +46,12 @@ public:
     float DPVFinalVoltage;
     float DPVPulseVoltage;
     int DPVLowTime;
+
+    int SWVIntervalTime;
+    float SWVVoltageStep;
+    float SWVInitialVoltage;
+    float SWVFinalVoltage;
+    float SWVPulseVoltage;
     
     int NPVPulseTime;
     float NPVVoltageStep;
@@ -57,6 +63,7 @@ public:
     void LinearSweepVoltammetry();
     void CyclicSweepVoltammetry();
     void DifferentialPulseVoltammetry();
+    void SquareWaveVoltammetry();
     void NormalPulseVoltammetry();
     void SendData();
     void ReadCurrent();

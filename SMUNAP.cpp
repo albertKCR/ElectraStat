@@ -69,29 +69,21 @@ void SMU::SerialInputInterpretation()
         break;
     case 2:
         commaIndex = restOfString.indexOf(',');
-        DPVPulseTime = restOfString.substring(0, commaIndex).toInt();
+        SWVIntervalTime = restOfString.substring(0, commaIndex).toInt();
+        SWVIntervalTime = 1000 / SWVIntervalTime;
 
         commaIndexAux = restOfString.indexOf(',', commaIndex + 1);
-        DPVVoltageStep = restOfString.substring(commaIndex + 1, commaIndexAux).toFloat() * 0.001;
+        SWVVoltageStep = restOfString.substring(commaIndex + 1, commaIndexAux).toFloat() * 0.001;
 
         commaIndex = restOfString.indexOf(',', commaIndexAux + 1);
-        DPVInitialVoltage = restOfString.substring(commaIndexAux + 1, commaIndex).toFloat();
+        SWVInitialVoltage = restOfString.substring(commaIndexAux + 1, commaIndex).toFloat();
 
         commaIndexAux = restOfString.indexOf(',', commaIndex + 1);
-        DPVFinalVoltage = restOfString.substring(commaIndex + 1, commaIndexAux).toFloat();
+        SWVFinalVoltage = restOfString.substring(commaIndex + 1, commaIndexAux).toFloat();
 
         commaIndex = restOfString.indexOf(',', commaIndexAux + 1);
-        DPVPulseVoltage = restOfString.substring(commaIndexAux + 1, commaIndex).toFloat() * 0.001;
+        SWVPulseVoltage = restOfString.substring(commaIndexAux + 1, commaIndex).toFloat() * 0.001;
 
-        commaIndexAux = restOfString.indexOf(',', commaIndex + 1);
-        DPVLowTime = restOfString.substring(commaIndex + 1, commaIndexAux).toInt();
-
-        // Serial.println(DPVPulseTime);
-        // Serial.println(DPVVoltageStep);
-        // Serial.println(DPVInitialVoltage);
-        // Serial.println(DPVFinalVoltage);
-        // Serial.println(DPVPulseVoltage);
-        // Serial.println(DPVLowTime);
         SquareWaveVoltammetry();
         break;
     default:
@@ -193,16 +185,8 @@ void SMU::CyclicSweepVoltammetry()
 
 void SMU::SquareWaveVoltammetry()
 {
-    DataPackage = "";
     int timer = 0;
-    count = 0;
     int direction;
-
-    SWVIntervalTime = 0;
-    SWVVoltageStep = 0.005;
-    SWVInitialVoltage = 0;
-    SWVFinalVoltage = 0.4;
-    SWVPulseVoltage = 0.02;
 
     if (SWVFinalVoltage > SWVInitialVoltage)
         direction = 1;
@@ -211,7 +195,7 @@ void SMU::SquareWaveVoltammetry()
 
     float lastVoltage = SWVInitialVoltage;
     ApplyVoltage(lastVoltage);
-    // ReadCurrent();
+    ReadCurrent();
 
     while ((direction == 1 && lastVoltage < SWVFinalVoltage) || (direction == -1 && lastVoltage > SWVFinalVoltage))
     {
@@ -219,27 +203,17 @@ void SMU::SquareWaveVoltammetry()
         lastVoltage += direction * (SWVPulseVoltage + SWVVoltageStep);
 
         ApplyVoltage(lastVoltage);
-        // ReadCurrent();
+        ReadCurrent();
 
         lastVoltage -= direction * SWVPulseVoltage;
 
         ApplyVoltage(lastVoltage);
-        // ReadCurrent();
-
-        if (count == 10)
-        {
-            SendData();
-            count = 0;
-        }
-        count++;
+        ReadCurrent();
 
         while ((millis() - timer) < DPVLowTime)
         {
         }
     }
-    count++;
-    if (count != 0)
-        SendData();
     DAC.setVoltage(0, false);
 }
 
@@ -256,18 +230,6 @@ void SMU::ApplyVoltage(float voltage)
     dataString = String(voltage, 5);
 }
 
-void SMU::SendData()
-{
-    // Serial.print(DataPackage);
-    DataPackage = "";
-}
-
-// ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V    0.1875mV (default)
-// ads.setGain(GAIN_ONE);        // 1x gain   +/- 4.096V    0.125mV
-// ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V    0.0625mV
-// ads.setGain(GAIN_FOUR);       // 4x gain   +/- 1.024V    0.03125mV
-// ads.setGain(GAIN_EIGHT);      // 8x gain   +/- 0.512V    0.015625mV
-// ads.setGain(GAIN_SIXTEEN);    // 16x gain  +/- 0.256V    0.0078125mV
 void SMU::ReadCurrent()
 {
     multiplier = 0.0001875F;
@@ -275,66 +237,4 @@ void SMU::ReadCurrent()
     
     dataString = dataString + "," + String(corrente, 9);
     Serial.println(dataString);
-}
-
-void SMU::MeanOfMeasures(bool flag)
-{
-    if (flag)
-    {
-        resultDiff0_1 = 0;
-        for (int i = 0; i < 5; i++)
-        {
-            resultDiff0_1 = resultDiff0_1 + ads.readADC_Differential_0_1();
-        }
-        resultDiff0_1 = resultDiff0_1 / 5;
-    }
-    else
-    {
-        resultCh2 = 0;
-        for (int i = 0; i < 5; i++)
-        {
-            resultCh2 = resultCh2 + ads.readADC_SingleEnded(2);
-        }
-        resultCh2 = resultCh2 / 5;
-    }
-}
-
-void SMU::ADSSetGain(float voltage)
-{
-    if (abs(voltage) > 3.9)
-    {
-        ads.setGain(GAIN_TWOTHIRDS);
-        multiplier = 0.0001875;
-        // Serial.println("GAIN_TWOTHIRDS");
-    }
-    else if (abs(voltage) < 3.9 && abs(voltage) > 1.9)
-    {
-        ads.setGain(GAIN_ONE);
-        multiplier = 0.000125;
-        // Serial.println("GAIN_ONE");
-    }
-    else if (abs(voltage) < 1.9 && abs(voltage) > 0.85)
-    {
-        ads.setGain(GAIN_TWO);
-        multiplier = 0.0000625;
-        // Serial.println("GAIN_TWO");
-    }
-    else if (abs(voltage) < 0.85 && abs(voltage) > 0.38)
-    {
-        ads.setGain(GAIN_FOUR);
-        multiplier = 0.00003125;
-        // Serial.println("GAIN_FOUR");
-    }
-    else if (abs(voltage) < 0.38 && abs(voltage) > 0.19)
-    {
-        ads.setGain(GAIN_EIGHT);
-        multiplier = 0.000015625;
-        // Serial.println("GAIN_EIGHT");
-    }
-    else if (abs(voltage) < 0.19)
-    {
-        ads.setGain(GAIN_SIXTEEN);
-        multiplier = 0.0000078125;
-        // Serial.println("GAIN_SIXTEEN");
-    }
 }

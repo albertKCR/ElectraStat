@@ -130,14 +130,6 @@ void SMU::CyclicSweepVoltammetry()
     int contador = 0;
     int timer = 0;
 
-    CVVoltageStep = 0.005;
-    CVInitialVoltage = -0.1;
-    CVFinalVoltage = 0.1;
-    CVPeakVoltage = -0.4;
-    CVPeakVoltage2 = 0.5;
-    CVCycles = 1;
-    CVStepTime = 30;
-
     int direction;
     float i = CVInitialVoltage;
 

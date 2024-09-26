@@ -27,6 +27,8 @@ public:
     float TransimpedanceResistor = 50000;
     int count;
 
+    String dataString = "";
+
     int LSVStepTime;
     float LSVVoltageStep;
     float LSVInitialVoltage;
@@ -52,25 +54,15 @@ public:
     float SWVInitialVoltage;
     float SWVFinalVoltage;
     float SWVPulseVoltage;
-    
-    int NPVPulseTime;
-    float NPVVoltageStep;
-    float NPVInitialVoltage;
-    float NPVFinalVoltage;
-    int NPVLowTime;
 
     void SerialInputInterpretation();
     void LinearSweepVoltammetry();
     void CyclicSweepVoltammetry();
-    void DifferentialPulseVoltammetry();
     void SquareWaveVoltammetry();
-    void NormalPulseVoltammetry();
     void SendData();
     void ReadCurrent();
-    void ReadVoltage();
     void ADSSetGain(float voltage);
     void MeanOfMeasures(bool flag);
-    void VoltageControl(float desiredVoltage, float bitDesiredVoltage);
     void ApplyVoltage(float voltage);
 };
 

@@ -233,8 +233,8 @@ void SMU::ApplyVoltage(float voltage)
 void SMU::ReadCurrent()
 {
     multiplier = 0.0001875F;
-    float corrente = ((ads.readADC_Differential_2_3() * multiplier) - 2.5) / 50000;
+    float corrente = 1000000 *((ads.readADC_Differential_2_3() * multiplier) - 2.5) / 50000;
     
-    dataString = dataString + "," + String(corrente, 9);
+    dataString = dataString + "," + String(corrente, 4);
     Serial.println(dataString);
 }

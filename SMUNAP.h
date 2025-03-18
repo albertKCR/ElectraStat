@@ -29,7 +29,7 @@ public:
 
     String dataString = "";
 
-    int LSVStepTime;
+    float LSVStepTime;
     float LSVVoltageStep;
     float LSVInitialVoltage;
     float LSVFinalVoltage;

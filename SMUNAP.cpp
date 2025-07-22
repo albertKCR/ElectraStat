@@ -142,12 +142,10 @@ void SMU::LinearSweepVoltammetry()
         i += direction * LSVVoltageStep;
     }
     DAC.setVoltage(0, false);
-    resetFunc();
 }
 
 void SMU::CyclicSweepVoltammetry()
 {
-    int contador = 0;
     long timer = 0;
 
     int direction;
@@ -160,7 +158,7 @@ void SMU::CyclicSweepVoltammetry()
 
     for (int cycle = 0; cycle < CVCycles; cycle++)
     {
-
+        i = CVInitialVoltage;
         while ((direction == 1 && i <= CVPeakVoltage) || (direction == -1 && i >= CVPeakVoltage))
         {
             timer = millis();
@@ -209,13 +207,13 @@ void SMU::CyclicSweepVoltammetry()
         }
     }
     DAC.setVoltage(0, false);
-    resetFunc();
 }
 
 void SMU::SquareWaveVoltammetry()
 {
     long timer = 0;
     int direction;
+    float current1, current2;
 
     if (SWVFinalVoltage > SWVInitialVoltage)
         direction = 1;
@@ -223,28 +221,36 @@ void SMU::SquareWaveVoltammetry()
         direction = -1;
 
     float lastVoltage = SWVInitialVoltage;
-    ApplyVoltage(lastVoltage);
-    ReadCurrent();
+    //ApplyVoltage(lastVoltage);
+    //ReadCurrentSWV();
 
     while ((direction == 1 && lastVoltage <= SWVFinalVoltage) || (direction == -1 && lastVoltage >= SWVFinalVoltage))
     {
         timer = millis();
         lastVoltage += direction * (SWVPulseVoltage + SWVVoltageStep);
 
-        ApplyVoltage(lastVoltage);
-        ReadCurrent();
+        ApplyVoltageSWV(lastVoltage);
+        dataString = String(lastVoltage, 5);
+        current1 = ReadCurrentSWV();
 
+        while ((millis() - timer) < SWVIntervalTime)
+        {
+        }
+
+        timer = millis();
         lastVoltage -= direction * SWVPulseVoltage;
 
-        ApplyVoltage(lastVoltage);
-        ReadCurrent();
+        ApplyVoltageSWV(lastVoltage);
+        current2 = ReadCurrentSWV();
+
+        dataString = dataString + "," + String(current1 - current2, 4);
+        Serial.println(dataString);
 
         while ((millis() - timer) < SWVIntervalTime)
         {
         }
     }
     DAC.setVoltage(0, false);
-    resetFunc();
 }
 
 void SMU::ApplyVoltage(float voltage)
@@ -260,6 +266,19 @@ void SMU::ApplyVoltage(float voltage)
     dataString = String(voltage, 5);
 }
 
+void SMU::ApplyVoltageSWV(float voltage)
+{
+    float DACVoltageBit;
+    DACVoltageBit = voltage * (10 / 3.3F) + 1.723 - 0.02;
+    DACVoltageBit = DACVoltageBit * (4095 / 5);
+    DACVoltageBit = constrain(DACVoltageBit, 0, 4095);
+
+    DAC.setVoltage(DACVoltageBit, false);
+    float currentVoltage = (ads.readADC_Differential_0_1() * multiplier) - 0.5 + 0.05;
+
+    //dataString = String(voltage, 5);
+}
+
 void SMU::ReadCurrent()
 {
     multiplier = 0.0001875F;
@@ -270,4 +289,17 @@ void SMU::ReadCurrent()
 
     dataString = dataString + "," + String(corrente, 4);
     Serial.println(dataString);
+}
+
+float SMU::ReadCurrentSWV()
+{
+    multiplier = 0.0001875F;
+    float corrente = 1000000 *((ads.readADC_Differential_2_3() * multiplier) - 2.5 + 0.04) / 50000;
+    //float corrente = 1000000 *((ads.readADC_SingleEnded(2) * multiplier) - 2.5) / 50000;
+    
+    // float corrente = ads.readADC_Differential_2_3() * multiplier;
+
+    //dataString = dataString + "," + String(corrente, 4);
+    //Serial.println(dataString);
+    return corrente;
 }

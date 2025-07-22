@@ -61,9 +61,11 @@ public:
     void SquareWaveVoltammetry();
     void SendData();
     void ReadCurrent();
+    float ReadCurrentSWV();
     void ADSSetGain(float voltage);
     void MeanOfMeasures(bool flag);
     void ApplyVoltage(float voltage);
+    void ApplyVoltageSWV(float voltage);
 };
 
 #endif

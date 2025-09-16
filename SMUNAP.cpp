@@ -226,29 +226,27 @@ void SMU::SquareWaveVoltammetry()
 
     while ((direction == 1 && lastVoltage <= SWVFinalVoltage) || (direction == -1 && lastVoltage >= SWVFinalVoltage))
     {
-        timer = millis();
         lastVoltage += direction * (SWVPulseVoltage + SWVVoltageStep);
-
-        ApplyVoltageSWV(lastVoltage);
         dataString = String(lastVoltage, 5);
+        ApplyVoltageSWV(lastVoltage);
+        timer = millis();        
+        
+        while ((millis() - timer) < SWVIntervalTime)
+        {
+        }
         current1 = ReadCurrentSWV();
 
+        
+        lastVoltage -= direction * SWVPulseVoltage;
+        ApplyVoltageSWV(lastVoltage);
+        timer = millis();
+
         while ((millis() - timer) < SWVIntervalTime)
         {
         }
-
-        timer = millis();
-        lastVoltage -= direction * SWVPulseVoltage;
-
-        ApplyVoltageSWV(lastVoltage);
         current2 = ReadCurrentSWV();
-
         dataString = dataString + "," + String(current1 - current2, 4);
         Serial.println(dataString);
-
-        while ((millis() - timer) < SWVIntervalTime)
-        {
-        }
     }
     DAC.setVoltage(0, false);
 }

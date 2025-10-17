@@ -57,6 +57,9 @@ Built with **C# and WPF**, it communicates with the SMU via a serial connection.
 - Save plots as **PNG**
 - Clear or reset charts
 
+<img width="1256" height="810" alt="ca333cf7-4f64-4051-b0c5-d0a3b4880eb2" src="https://github.com/user-attachments/assets/e07ac639-861d-4bcb-9af3-3bf0ab3119dd" />
+
+
 ---
 
 ## 💻 GUI Application

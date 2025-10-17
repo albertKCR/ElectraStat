@@ -3,6 +3,7 @@
 **Electrastat** is an open-source, low-cost **potentiostat / source-measure unit (SMU)** designed for electrochemical measurements such as **cyclic voltammetry (CV)**, **linear sweep voltammetry (LSV)**, and **square wave voltammetry (SWV)**.  
 It can apply potentials from **–0.5 V to +1 V** and measure currents up to **±70 µA** with a resolution of approximately **5 µA**, making it suitable for research, teaching, and prototyping of electrochemical sensors.
 
+The C# interface can be found at https://github.com/albertKCR/Potentiostat. 
 ---
 
 ## 🔧 Key Features
